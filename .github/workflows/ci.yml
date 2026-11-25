@@ -15,8 +15,10 @@ jobs:
         include:
           - os: windows-latest
             preset: msvc
+            exe: build/msvc-release/terrain-icp.exe
           - os: ubuntu-latest   # Ubuntu 24.04: g++ is GCC 13
             preset: gcc
+            exe: build/gcc-release/terrain-icp
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -43,8 +45,15 @@ jobs:
       - name: Test (GoogleTest)
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
 
-      # The end-to-end tests find build/<preset>/terrain-icp on their own.
+      # pytest drives the executable many times (vertical step, trim sweep): use an optimised build for it.
+      - name: Configure and build (Release, for pytest)
+        run: |
+          cmake --preset ${{ matrix.preset }}-release
+          cmake --build --preset ${{ matrix.preset }}-release --target terrain-icp
+
       - name: Test (pytest)
+        env:
+          TERRAIN_ICP_EXE: ${{ github.workspace }}/${{ matrix.exe }}
         run: |
           uv sync --project python --locked
           uv run --project python pytest python/tests

@@ -49,22 +49,46 @@ def sweep_row(results_dir: Path, trim: float) -> dict:
             "yaw_deg": res["transform"]["rotation_deg"]["yaw"], "rms_m": res["fit"]["rms_m"]}
 
 
+def _spreads(rows: list[dict]) -> dict[str, float]:
+    """max - min of each tested quantity over `rows` (vertical scale only when every row has it)."""
+    return {k: max(r[k] for r in rows) - min(r[k] for r in rows)
+            for k in STABLE_SPREAD if all(r[k] is not None for r in rows)}
+
+
+def _unstable(rows: list[dict]) -> list[str]:
+    return [k for k, v in _spreads(rows).items() if v > STABLE_SPREAD[k]]
+
+
+def stable_from(rows: list[dict]) -> float | None:
+    """Smallest trim of the longest run of consecutive highest ratios (at least two) that is stable; None if none."""
+    rows = sorted(rows, key=lambda r: r["trim"])
+    for i in range(len(rows) - 1):
+        if not _unstable(rows[i:]):
+            return rows[i]["trim"]
+    return None
+
+
 def sweep_section(rows: list[dict]) -> list[str]:
+    rows = sorted(rows, key=lambda r: r["trim"])
     lines = ["## Trimming sensitivity", "",
              "The same alignment with each trim ratio (fraction of the worst pairs dropped every iteration).", "",
              "| Trim | Scale | Vertical scale | Yaw [°] | RMS [m] |", "|---|---|---|---|---|"]
     for r in rows:
         vertical = "—" if r["vertical_scale"] is None else f"{r['vertical_scale']:.5f}"
         lines.append(f"| {r['trim']:g} | {r['scale']:.5f} | {vertical} | {r['yaw_deg']:+.4f} | {r['rms_m']:.4f} |")
-    spreads = {k: max(r[k] for r in rows) - min(r[k] for r in rows)
-               for k in STABLE_SPREAD if all(r[k] is not None for r in rows)}
-    unstable = [k for k, v in spreads.items() if v > STABLE_SPREAD[k]]
-    detail = ", ".join(f"{k} spread {v:.2g} (limit {STABLE_SPREAD[k]:g})" for k, v in spreads.items())
+    if len(rows) < 2:
+        return lines + ["", "A single trim ratio: no sensitivity to report.", ""]
+
+    unstable = _unstable(rows)
+    detail = ", ".join(f"{k} spread {v:.2g} (limit {STABLE_SPREAD[k]:g})" for k, v in _spreads(rows).items())
     verdict = (f"**NOT stable**: {', '.join(unstable)} change with the trim ratio; outliers probably exceed the "
                "smaller ratios, so trust the larger ones" if unstable else "**Stable**: the result does not depend on "
                "the trim ratio")
+    start = stable_from(rows)
+    since = (f"**Stable from trim {start:g}**: the ratios from {start:g} up agree within the limits."
+             if start is not None else "**Not stable from any trim**: even the two highest ratios disagree.")
     lines += ["", f"{verdict} ({detail}). RMS naturally falls as more pairs are dropped; it is not part of the test.",
-              ""]
+              "", since, ""]
     return lines
 
 

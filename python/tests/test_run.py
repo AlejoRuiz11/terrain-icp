@@ -51,6 +51,7 @@ def test_trim_sweep_flags_outliers_above_the_smallest_ratio(tmp_path, exe):
     assert trim_03[1] == pytest.approx(1.005, abs=5e-4)
     assert trim_03[2] == pytest.approx(2.0, abs=0.01)
     assert "**NOT stable**" in text
+    assert "**Stable from trim 0.2**" in text
 
 
 def test_run_measures_a_vertical_stretch(tmp_path, exe):

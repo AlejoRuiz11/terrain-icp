@@ -65,7 +65,8 @@ uv run --project python terrain-icp-tools run dem.tif mesh.ply --origin E N H --
   DEM's CRS and is shifted by the same origin.
 - `run --trim-sweep 0.1,0.2,0.3` repeats the alignment (and the vertical step, if asked) with each trim ratio in
   `out/trim_sweep/` and adds to `summary.md` a table of scale, vertical scale, yaw and RMS per ratio, with a verdict:
-  *stable* when the spread stays under 2e-4 in scale, 5e-4 in vertical scale and 0.01° in yaw. An unstable result
+  *stable* when the spread stays under 2e-4 in scale, 5e-4 in vertical scale and 0.01° in yaw, and the ratio it is
+  stable from (the longest run of highest ratios that agree, e.g. "stable from trim 0.2"). An unstable result
   usually means the outliers exceed the smaller ratios (trimming must exceed the outlier fraction).
 
 **Vertical scale** (`--vertical-scale`): a mesh can be stretched in height only (for example a camera calibration
