@@ -1,0 +1,21 @@
+# Build trees
+build/
+out/
+.vs/
+CMakeUserPresets.json
+
+# Data never lives in this repository: inputs are passed by path
+data/
+*.tif
+*.tiff
+*.ply
+*.las
+*.laz
+*.obj
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
