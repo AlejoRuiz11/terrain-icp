@@ -51,7 +51,8 @@ root:
 uv run --project python terrain-icp-tools dem-to-ply dem.tif reference.ply --origin E N H [--step 2]
 uv run --project python terrain-icp-tools report out/ [--vertical-scale]
 uv run --project python terrain-icp-tools run dem.tif mesh.ply --origin E N H --out out/ \
-    [--shift-moving] [--scale] [--max-dist m] [--vertical-scale] [--exe path/to/terrain-icp]
+    [--shift-moving] [--scale] [--max-dist m] [--vertical-scale] [--trim-sweep 0.1,0.2,0.3] \
+    [--exe path/to/terrain-icp]
 ```
 
 - `dem-to-ply` turns band 1 of a GeoTIFF into pixel-centre points `(E − E0, N − N0, h − H0)`: a local metric frame
@@ -62,6 +63,10 @@ uv run --project python terrain-icp-tools run dem.tif mesh.ply --origin E N H --
   translation, RMS and percentiles, inliers, conditioning, warnings).
 - `run` chains `dem-to-ply`, `terrain-icp align` and `report`. With `--shift-moving` the mesh is taken to be in the
   DEM's CRS and is shifted by the same origin.
+- `run --trim-sweep 0.1,0.2,0.3` repeats the alignment (and the vertical step, if asked) with each trim ratio in
+  `out/trim_sweep/` and adds to `summary.md` a table of scale, vertical scale, yaw and RMS per ratio, with a verdict:
+  *stable* when the spread stays under 2e-4 in scale, 5e-4 in vertical scale and 0.01° in yaw. An unstable result
+  usually means the outliers exceed the smaller ratios (trimming must exceed the outlier fraction).
 
 **Vertical scale** (`--vertical-scale`): a mesh can be stretched in height only (for example a camera calibration
 error), which a uniform scale cannot represent. After the alignment, a moving point whose heights are stretched by

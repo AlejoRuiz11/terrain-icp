@@ -33,16 +33,33 @@ def run(args: argparse.Namespace) -> None:
     points = plyio.read_points(Path(args.mesh))
     if args.shift_moving:  # the mesh is in the DEM's CRS: bring it to the same local origin
         points = points - origin
+    exe = find_executable(args.exe)
+
+    stretch = align_and_fit(exe, args, reference, points, out, args.trim)
+    sweep = []
+    for trim in args.trim_sweep or []:
+        sub = out / "trim_sweep" / f"{trim:g}"
+        print(f"trim sweep: {trim:g}")
+        sub.mkdir(parents=True, exist_ok=True)
+        align_and_fit(exe, args, reference, points, sub, trim)
+        sweep.append(report.sweep_row(sub, trim))
+
+    summary = report.make_report(out, vertical=args.vertical_scale, removed_stretch=stretch, sweep=sweep)
+    print(f"report: {summary}")
+
+
+def align_and_fit(exe: str, args: argparse.Namespace, reference: Path, points, out: Path,
+                  trim: float | None) -> float:
+    """terrain-icp align into `out` (moving.ply, results.json, residuals.ply), plus the vertical step when asked.
+    Returns the height stretch divided out of moving.ply (1 without --vertical-scale)."""
     moving = out / "moving.ply"
     plyio.write_points(moving, points)
-
-    exe = find_executable(args.exe)
 
     def align(init: str | None) -> None:
         command = [exe, "align", str(reference), str(moving), "--out", str(out)]
         if args.scale:
             command.append("--scale")
-        for flag, value in (("--max-dist", args.max_dist), ("--trim", args.trim), ("--init", init)):
+        for flag, value in (("--max-dist", args.max_dist), ("--trim", trim), ("--init", init)):
             if value is not None:
                 command += [flag, str(value)]
         subprocess.run(command, check=True)
@@ -69,9 +86,14 @@ def run(args: argparse.Namespace) -> None:
         (out / "vertical_scale.json").write_text(json.dumps(
             {"height_stretch": stretch_total, "vertical_scale": scale / stretch_total,
              "heights_corrected_about_z": float(z_mean)}, indent=2) + "\n")
+    return stretch
 
-    summary = report.make_report(out, vertical=args.vertical_scale, removed_stretch=stretch)
-    print(f"report: {summary}")
+
+def trim_list(text: str) -> list[float]:
+    values = [float(v) for v in text.split(",") if v.strip()]
+    if not values or any(not 0.0 <= v < 1.0 for v in values):
+        raise argparse.ArgumentTypeError("--trim-sweep needs comma-separated ratios in [0, 1)")
+    return values
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -107,6 +129,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--vertical-scale", action="store_true",
                    help="estimate a z-only scale, alternating with the ICP (see --vertical-iterations)")
     p.add_argument("--vertical-iterations", type=int, default=10)
+    p.add_argument("--trim-sweep", type=trim_list, metavar="R1,R2,...",
+                   help="also align with each trim ratio (in out/trim_sweep/) and tabulate the sensitivity")
     p.add_argument("--exe", help="path of terrain-icp (default: $TERRAIN_ICP_EXE or PATH)")
 
     p = sub.add_parser("synth", help="synthetic scene: dem.tif, mesh.ply (same CRS) and truth.json")

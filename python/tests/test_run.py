@@ -35,6 +35,24 @@ def test_run_recovers_the_known_transform(tmp_path, exe):
     assert (out / "residual_map.png").is_file()
 
 
+def test_trim_sweep_flags_outliers_above_the_smallest_ratio(tmp_path, exe):
+    # 20 % of the vertices lifted 3-20 m: trimming 10 % keeps many of them, 30 % drops them all.
+    synthetic.write_scene(tmp_path / "scene", ORIGIN, outliers=0.2)
+    out = tmp_path / "out"
+    cli.main(["run", str(tmp_path / "scene" / "dem.tif"), str(tmp_path / "scene" / "mesh.ply"),
+              "--origin", *map(str, ORIGIN), "--out", str(out), "--shift-moving", "--scale", "--vertical-scale",
+              "--trim-sweep", "0.1,0.2,0.3", "--exe", exe])
+
+    text = (out / "summary.md").read_text(encoding="utf-8")
+    rows = [line.split("|")[1:-1] for line in text.splitlines() if line.startswith("| 0.")]
+    assert [r[0].strip() for r in rows] == ["0.1", "0.2", "0.3"]
+    trim_03 = [float(c) for c in rows[2][1:]]  # scale, vertical scale, yaw, rms
+    assert trim_03[0] == pytest.approx(1.005, abs=2e-4)
+    assert trim_03[1] == pytest.approx(1.005, abs=5e-4)
+    assert trim_03[2] == pytest.approx(2.0, abs=0.01)
+    assert "**NOT stable**" in text
+
+
 def test_run_measures_a_vertical_stretch(tmp_path, exe):
     # Mesh heights 3 % exaggerated: x_ref = s R x_moving + t horizontally, but heights map with s / 1.03.
     out, res = run_scene(tmp_path, exe, vertical_scale=1.03)
