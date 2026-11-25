@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -62,6 +63,12 @@ def run(args: argparse.Namespace) -> None:
             align(str(out / "results.json"))
             if abs(k - 1.0) < 1e-4:
                 break
+        # Machine-readable result of the vertical step; moving.ply holds the height-corrected cloud it applies to.
+        stretch_total = stretch * report.residual_stretch(out)
+        scale = json.loads((out / "results.json").read_text())["transform"]["scale"]
+        (out / "vertical_scale.json").write_text(json.dumps(
+            {"height_stretch": stretch_total, "vertical_scale": scale / stretch_total,
+             "heights_corrected_about_z": float(z_mean)}, indent=2) + "\n")
 
     summary = report.make_report(out, vertical=args.vertical_scale, removed_stretch=stretch)
     print(f"report: {summary}")
@@ -109,6 +116,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--yaw", type=float, default=2.0, help="degrees")
     p.add_argument("--translation", nargs=3, type=float, default=(2.0, -2.0, 1.0))
     p.add_argument("--vertical-scale", type=float, default=1.0)
+    p.add_argument("--outliers", type=float, default=0.0, help="fraction of mesh vertices lifted 3-20 m")
 
     args = parser.parse_args(argv)
     if args.command == "dem-to-ply":
@@ -120,7 +128,7 @@ def main(argv: list[str] | None = None) -> None:
         run(args)
     elif args.command == "synth":
         synthetic.write_scene(Path(args.out), tuple(args.origin), args.scale, args.yaw, tuple(args.translation),
-                              args.vertical_scale)
+                              args.vertical_scale, outliers=args.outliers)
         print(f"dem.tif, mesh.ply and truth.json -> {args.out}")
 
 

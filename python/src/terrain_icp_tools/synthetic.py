@@ -52,28 +52,33 @@ def rotation_z(yaw_deg: float) -> np.ndarray:
 
 
 def mesh_points(count: int = 6000, half: float = 70.0, noise: float = 0.02, scale: float = 1.0, yaw_deg: float = 0.0,
-                translation=(0.0, 0.0, 0.0), vertical_scale: float = 1.0, seed: int = 42) -> np.ndarray:
+                translation=(0.0, 0.0, 0.0), vertical_scale: float = 1.0, outliers: float = 0.0,
+                seed: int = 42) -> np.ndarray:
     """Random surface samples in the moving frame: x_moving = truth^-1(x_surface), x_ref = s R x_moving + t.
 
-    `vertical_scale` stretches the sampled heights first (a mesh whose heights are exaggerated by that factor)."""
+    `vertical_scale` stretches the sampled heights first (a mesh whose heights are exaggerated by that factor).
+    `outliers`: fraction of the samples lifted 3-20 m (vegetation, buildings, reconstruction blobs)."""
     rng = np.random.default_rng(seed)
     x, y = rng.uniform(-half, half, (2, count))
     z = vertical_scale * height(x, y) + rng.normal(0.0, noise, count)
+    lifted = rng.random(count) < outliers
+    z[lifted] += rng.uniform(3.0, 20.0, lifted.sum())
     surface = np.column_stack([x, y, z])
     r = rotation_z(yaw_deg)
     return (surface - np.asarray(translation)) @ r / scale  # row-vector form of R^T (q - t) / s
 
 
 def write_scene(out: Path, origin: tuple[float, float, float], scale: float = 1.005, yaw_deg: float = 2.0,
-                translation=(2.0, -2.0, 1.0), vertical_scale: float = 1.0, noise: float = 0.02) -> dict:
+                translation=(2.0, -2.0, 1.0), vertical_scale: float = 1.0, noise: float = 0.02,
+                outliers: float = 0.0, dem_spacing: float = 1.0) -> dict:
     """dem.tif and mesh.ply (both georeferenced around `origin`) plus truth.json in `out`."""
     out.mkdir(parents=True, exist_ok=True)
-    write_dem(out / "dem.tif", origin)
+    write_dem(out / "dem.tif", origin, spacing=dem_spacing)
     local = mesh_points(scale=scale, yaw_deg=yaw_deg, translation=translation, vertical_scale=vertical_scale,
-                        noise=noise)
+                        outliers=outliers, noise=noise)
     plyio.write_points(out / "mesh.ply", local + np.asarray(origin), double=True)
     truth = {"scale": scale, "rotation_deg": {"yaw": yaw_deg, "pitch": 0.0, "roll": 0.0},
              "translation_m": list(translation), "vertical_scale": vertical_scale, "noise_m": noise,
-             "origin": list(origin)}
+             "outliers": outliers, "dem_spacing_m": dem_spacing, "origin": list(origin)}
     (out / "truth.json").write_text(json.dumps(truth, indent=2) + "\n")
     return truth
