@@ -51,7 +51,7 @@ root:
 uv run --project python terrain-icp-tools dem-to-ply dem.tif reference.ply --origin E N H [--step 2]
 uv run --project python terrain-icp-tools report out/ [--vertical-scale]
 uv run --project python terrain-icp-tools run dem.tif mesh.ply --origin E N H --out out/ \
-    [--shift-moving] [--scale] [--max-dist m] [--vertical-scale] [--trim-sweep 0.1,0.2,0.3] \
+    [--shift-moving] [--scale] [--max-dist m] [--max-iter n] [--max-cond c] [--vertical-scale] [--trim-sweep 0.1,0.2,0.3] \
     [--exe path/to/terrain-icp]
 ```
 
@@ -86,6 +86,39 @@ uv run --project python terrain-icp-tools synth --out demo
 uv run --project python terrain-icp-tools run demo/dem.tif demo/mesh.ply --origin 1000 2000 100 --out demo/out \
     --shift-moving --scale --vertical-scale --exe build/msvc-release/terrain-icp.exe
 ```
+
+## Local UI
+
+An optional [Streamlit](https://streamlit.io) interface runs the same chain as `run` from the browser:
+
+```bash
+uv sync --project python --extra ui
+uv run --project python terrain-icp-tools ui        # --port to change the port (default 8501)
+```
+
+It listens on localhost only, with telemetry off; uploads and the default output folder go to a temporary
+directory. Step by step, with the synthetic scene:
+
+1. Build the Release executable (`cmake --preset msvc-release` and `cmake --build --preset msvc-release`, or the
+   `gcc-release` preset). The UI finds it in `build/*-release/`; otherwise give its path in *terrain-icp executable*.
+2. Write a scene: `uv run --project python terrain-icp-tools synth --out demo/scene`. It prints the origin's
+   latitude and longitude (`0.01808739`, `0.00898315` for the default origin E 1000, N 2000, H 100).
+3. Start the UI, drop `demo/scene/dem.tif` on *Reference DEM* and `demo/scene/mesh.ply` on *Moving mesh*. Leave
+   *The mesh is in the DEM's CRS* ticked: the synthetic mesh is georeferenced.
+4. Enter the origin as latitude / longitude (converted to the DEM's CRS with pyproj; a DEM that is not projected in
+   metres is rejected with a clear error) or switch to easting / northing. Elevation 100.
+5. Optionally load an initial alignment: a previous `results.json`, or `{"east_m", "north_m", "up_m", "yaw_deg"}`.
+   Options default to scale and vertical scale on and a trim sweep of 0.1, 0.2, 0.3; *Advanced* has the iteration
+   and condition-number limits and the DEM step.
+6. Press **Align**. The progress bar follows the steps (DEM, alignment, each trim, report).
+
+![UI inputs with the synthetic scene](docs/img/ui_inputs.png)
+
+The result shows the known transform of the scene (scale 1.005, yaw 2°, translation 2 / −2 / 1 m), the vertical
+scale, RMS, warnings, the trim sweep with its verdict, the residual map and histogram, and a button that opens the
+output folder (`results.json`, `residuals.ply`, `summary.md`, figures).
+
+![UI result with the synthetic scene](docs/img/ui_results.png)
 
 ## Method
 
@@ -210,6 +243,8 @@ What the differences mean (no parameter was tuned to make the tools agree):
    scale, one `run` command for the whole chain. *Done.*
 3. **Cross-check with CloudCompare** — same synthetic inputs, table of differences. *Done*, see
    [above](#cross-check-with-cloudcompare).
+4. **Local UI** — Streamlit front end over `run`, origin by latitude / longitude. *Done*, see
+   [Local UI](#local-ui).
 
 ## License
 

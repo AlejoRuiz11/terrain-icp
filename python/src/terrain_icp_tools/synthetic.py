@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pyproj
 import rasterio
 from rasterio.transform import from_origin
 
@@ -23,6 +24,13 @@ HILLS = [
 
 # A generic transverse Mercator on the WGS84 ellipsoid (not any real projection zone): projected, in metres.
 LOCAL_CRS = "+proj=tmerc +lat_0=0 +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs"
+
+
+def origin_latlon(origin: tuple[float, float, float]) -> tuple[float, float]:
+    """Latitude and longitude (WGS84, decimal degrees) of an origin given in LOCAL_CRS, for the UI's origin input."""
+    lon, lat = pyproj.Transformer.from_crs(LOCAL_CRS, "+proj=longlat +datum=WGS84 +no_defs",
+                                           always_xy=True).transform(origin[0], origin[1])
+    return float(lat), float(lon)
 
 
 def height(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -79,6 +87,7 @@ def write_scene(out: Path, origin: tuple[float, float, float], scale: float = 1.
     plyio.write_points(out / "mesh.ply", local + np.asarray(origin), double=True)
     truth = {"scale": scale, "rotation_deg": {"yaw": yaw_deg, "pitch": 0.0, "roll": 0.0},
              "translation_m": list(translation), "vertical_scale": vertical_scale, "noise_m": noise,
-             "outliers": outliers, "dem_spacing_m": dem_spacing, "origin": list(origin)}
+             "outliers": outliers, "dem_spacing_m": dem_spacing, "origin": list(origin),
+             "origin_lat_lon_deg": list(origin_latlon(origin))}
     (out / "truth.json").write_text(json.dumps(truth, indent=2) + "\n")
     return truth

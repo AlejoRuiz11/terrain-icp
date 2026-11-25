@@ -1,31 +1,52 @@
-"""terrain-icp-tools: dem-to-ply, report, run (the whole chain) and synth (a synthetic scene for demos)."""
+"""terrain-icp-tools: dem-to-ply, report, run (the whole chain), synth (a synthetic scene for demos) and ui."""
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from terrain_icp_tools import dem, plyio, report, synthetic
 
+# Release builds of this repository (python/src/terrain_icp_tools/cli.py -> repository root), used as a last resort.
+REPO = Path(__file__).resolve().parents[3]
+REPO_BUILDS = [REPO / "build" / preset / name for preset in ("msvc-release", "gcc-release")
+               for name in ("terrain-icp.exe", "terrain-icp")]
+
+Progress = Callable[[int, int, str], None]  # (step done, total steps, label of the next step)
+
 
 def find_executable(explicit: str | None) -> str:
-    """--exe, then $TERRAIN_ICP_EXE, then `terrain-icp` on PATH."""
+    """--exe, then $TERRAIN_ICP_EXE, then `terrain-icp` on PATH, then a Release build of this repository."""
     candidate = explicit or os.environ.get("TERRAIN_ICP_EXE") or shutil.which("terrain-icp")
+    if not candidate:
+        candidate = next((str(p) for p in REPO_BUILDS if p.is_file()), None)
     if not candidate or not Path(candidate).is_file():
-        raise SystemExit("terrain-icp executable not found: pass --exe, set TERRAIN_ICP_EXE or add it to PATH")
+        raise SystemExit("terrain-icp executable not found: pass --exe, set TERRAIN_ICP_EXE, add it to PATH or "
+                         "build the Release preset")
     return str(Path(candidate).resolve())  # Windows cannot start a relative path written with '/'
 
 
-def run(args: argparse.Namespace) -> None:
+def run(args: argparse.Namespace, progress: Progress | None = None) -> Path:
+    """The whole chain; returns the path of summary.md. `progress` is told before each step."""
+    sweep_trims = args.trim_sweep or []
+    total = 3 + len(sweep_trims)
+
+    def step(done: int, label: str) -> None:
+        if progress:
+            progress(done, total, label)
+
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     origin = tuple(args.origin)
 
+    step(0, "Converting the DEM")
     reference = out / "reference.ply"
     count = dem.dem_to_ply(Path(args.dem), reference, origin, args.step)
     print(f"DEM -> {reference.name}: {count} points")
@@ -35,17 +56,22 @@ def run(args: argparse.Namespace) -> None:
         points = points - origin
     exe = find_executable(args.exe)
 
+    step(1, "Aligning")
     stretch = align_and_fit(exe, args, reference, points, out, args.trim)
     sweep = []
-    for trim in args.trim_sweep or []:
+    for i, trim in enumerate(sweep_trims):
+        step(2 + i, f"Trim sweep: {trim:g}")
         sub = out / "trim_sweep" / f"{trim:g}"
         print(f"trim sweep: {trim:g}")
         sub.mkdir(parents=True, exist_ok=True)
         align_and_fit(exe, args, reference, points, sub, trim)
         sweep.append(report.sweep_row(sub, trim))
 
+    step(total - 1, "Writing the report")
     summary = report.make_report(out, vertical=args.vertical_scale, removed_stretch=stretch, sweep=sweep)
     print(f"report: {summary}")
+    step(total, "Done")
+    return summary
 
 
 def align_and_fit(exe: str, args: argparse.Namespace, reference: Path, points, out: Path,
@@ -59,7 +85,8 @@ def align_and_fit(exe: str, args: argparse.Namespace, reference: Path, points, o
         command = [exe, "align", str(reference), str(moving), "--out", str(out)]
         if args.scale:
             command.append("--scale")
-        for flag, value in (("--max-dist", args.max_dist), ("--trim", trim), ("--init", init)):
+        for flag, value in (("--max-dist", args.max_dist), ("--trim", trim), ("--init", init),
+                            ("--max-iter", args.max_iter), ("--max-cond", args.max_cond)):
             if value is not None:
                 command += [flag, str(value)]
         subprocess.run(command, check=True)
@@ -96,7 +123,20 @@ def trim_list(text: str) -> list[float]:
     return values
 
 
-def main(argv: list[str] | None = None) -> None:
+def run_ui(port: int) -> int:
+    """Launch the Streamlit app bound to localhost, without telemetry, with large uploads allowed."""
+    if importlib.util.find_spec("streamlit") is None:
+        print("error: the UI needs the optional 'ui' extra; install it with: uv sync --project python --extra ui",
+              file=sys.stderr)
+        return 1
+    command = [sys.executable, "-m", "streamlit", "run", str(Path(__file__).with_name("ui.py")),
+               "--server.address", "localhost", "--server.port", str(port),
+               "--browser.gatherUsageStats", "false", "--server.maxUploadSize", "4096",
+               "--server.showEmailPrompt", "false", "--client.toolbarMode", "minimal"]
+    return subprocess.run(command, check=False).returncode
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="terrain-icp-tools", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -125,6 +165,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--scale", action="store_true")
     p.add_argument("--max-dist", type=float)
     p.add_argument("--trim", type=float)
+    p.add_argument("--max-iter", type=int)
+    p.add_argument("--max-cond", type=float)
     p.add_argument("--init")
     p.add_argument("--vertical-scale", action="store_true",
                    help="estimate a z-only scale, alternating with the ICP (see --vertical-iterations)")
@@ -142,7 +184,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--vertical-scale", type=float, default=1.0)
     p.add_argument("--outliers", type=float, default=0.0, help="fraction of mesh vertices lifted 3-20 m")
 
-    args = parser.parse_args(argv)
+    p = sub.add_parser("ui", help="local web interface (needs the 'ui' extra)")
+    p.add_argument("--port", type=int, default=8501)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
     if args.command == "dem-to-ply":
         n = dem.dem_to_ply(Path(args.dem), Path(args.out), tuple(args.origin), args.step)
         print(f"{n} points -> {args.out}")
@@ -150,10 +198,14 @@ def main(argv: list[str] | None = None) -> None:
         print(report.make_report(Path(args.results_dir), args.out and Path(args.out), args.vertical_scale))
     elif args.command == "run":
         run(args)
+    elif args.command == "ui":
+        sys.exit(run_ui(args.port))
     elif args.command == "synth":
         synthetic.write_scene(Path(args.out), tuple(args.origin), args.scale, args.yaw, tuple(args.translation),
                               args.vertical_scale, outliers=args.outliers)
+        lat, lon = synthetic.origin_latlon(tuple(args.origin))
         print(f"dem.tif, mesh.ply and truth.json -> {args.out}")
+        print(f"origin E/N/H {' '.join(f'{v:g}' for v in args.origin)} = latitude {lat:.8f}, longitude {lon:.8f}")
 
 
 if __name__ == "__main__":
