@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "terrain-icp"
+abstract: "Compare a 3D terrain reconstruction against a georeferenced DEM with point-to-plane ICP: scale, rotation, translation and residual deformation."
+authors:
+  - family-names: "Ruiz Osorio"
+    given-names: "Fabian Alejandro"
+    alias: "AlejoRuiz11"
+version: "0.1.0"
+date-released: "2026-11-25"
+license: MIT
+repository-code: "https://github.com/AlejoRuiz11/terrain-icp"

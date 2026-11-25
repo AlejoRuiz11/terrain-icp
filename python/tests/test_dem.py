@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 import numpy as np
 import pytest
 import rasterio

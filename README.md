@@ -1,5 +1,7 @@
 # terrain-icp
 
+**Author:** Fabian Alejandro Ruiz Osorio ([@AlejoRuiz11](https://github.com/AlejoRuiz11)) · MIT License
+
 Compare a 3D terrain reconstruction (for example the vertices of a photogrammetry mesh) against a georeferenced
 elevation model (DEM) and measure how they differ: **scale, rotation, translation and the residual deformation**.
 
@@ -246,6 +248,11 @@ What the differences mean (no parameter was tuned to make the tools agree):
 4. **Local UI** — Streamlit front end over `run`, origin by latitude / longitude. *Done*, see
    [Local UI](#local-ui).
 
-## License
+## Author and license
 
-MIT, see [LICENSE](LICENSE).
+Designed and written by **Fabian Alejandro Ruiz Osorio** ([@AlejoRuiz11](https://github.com/AlejoRuiz11)): the method, the code, the tests
+and the documentation. Copyright (c) 2026 Fabian Alejandro Ruiz Osorio.
+
+Released under the MIT License, see [LICENSE](LICENSE) and [NOTICE](NOTICE). You may use, modify and redistribute
+it, including inside other projects, **as long as the copyright notice with the author's name is kept**. If you use it
+in published work, please cite it ([CITATION.cff](CITATION.cff)).

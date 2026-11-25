@@ -5,6 +5,8 @@
 name = "terrain-icp-tools"
 version = "0.1.0"
 description = "DEM conversion, reporting and pipeline for terrain-icp"
+authors = [{ name = "Fabian Alejandro Ruiz Osorio" }]
+license = "MIT"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy>=2.1",

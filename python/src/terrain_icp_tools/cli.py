@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """terrain-icp-tools: dem-to-ply, report, run (the whole chain), synth (a synthetic scene for demos) and ui."""
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
+import terrain_icp_tools
 from terrain_icp_tools import dem, plyio, report, synthetic
 
 # Release builds of this repository (python/src/terrain_icp_tools/cli.py -> repository root), used as a last resort.
@@ -138,6 +141,8 @@ def run_ui(port: int) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="terrain-icp-tools", description=__doc__)
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {terrain_icp_tools.__version__} - {terrain_icp_tools.__copyright__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_origin(p: argparse.ArgumentParser) -> None:

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Everything the Streamlit app does except drawing widgets, so it can be tested without a browser.
 
 The app (ui.py) only collects inputs, calls `run_alignment` and shows the `Outcome`."""

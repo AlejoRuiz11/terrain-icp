@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 // terrain-icp: align a terrain point cloud (e.g. mesh vertices) onto a reference (e.g. a DEM) with point-to-plane ICP.
 
 #include "terrain_icp/align_files.hpp"
@@ -10,8 +12,14 @@
 
 namespace {
 
+constexpr const char* kVersion =
+    "terrain-icp 0.1.0\n"
+    "Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)\n"
+    "MIT License: https://github.com/AlejoRuiz11/terrain-icp\n";
+
 constexpr const char* kUsage =
     "usage: terrain-icp align <reference.ply> <moving.ply> --out <dir> [options]\n"
+    "       terrain-icp --version\n"
     "\n"
     "Estimates x_ref = scale * R * x_moving + t by point-to-plane ICP and writes <dir>/results.json and\n"
     "<dir>/residuals.ply (aligned moving points with their signed distance to the reference).\n"
@@ -35,6 +43,10 @@ double parse_double(std::string_view flag, const std::string& text) {
 
 int main(int argc, char** argv) {
   const std::vector<std::string> args(argv + 1, argv + argc);
+  if (!args.empty() && args[0] == "--version") {
+    std::cout << kVersion;
+    return 0;
+  }
   if (args.empty() || args[0] != "align") {
     std::cerr << kUsage;
     return 2;

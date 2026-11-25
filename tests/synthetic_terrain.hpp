@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 #pragma once
 
 // Synthetic terrain for the tests: a sum of Gaussian hills (no real site anywhere in this repository).

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Cross-check terrain-icp against CloudCompare's ICP on synthetic scenes (no real data involved).
 
     uv run --project python python scripts/compare_cloudcompare.py --exe build/msvc-release/terrain-icp.exe \

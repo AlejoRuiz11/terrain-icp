@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 #include "terrain_icp/ply.hpp"
 
 #include <gtest/gtest.h>

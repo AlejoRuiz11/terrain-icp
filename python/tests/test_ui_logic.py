@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """The UI's logic (ui_logic.py) without Streamlit: origin from lat/lon, initial alignment files, the whole run."""
 
 import json

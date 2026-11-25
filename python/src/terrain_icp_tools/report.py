@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Report of an alignment: residual heat map, histogram and summary.md from results.json + residuals.ply."""
 
 from __future__ import annotations

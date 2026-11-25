@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Minimal PLY point I/O on top of plyfile: vertex x, y, z plus named scalar fields."""
 
 from __future__ import annotations

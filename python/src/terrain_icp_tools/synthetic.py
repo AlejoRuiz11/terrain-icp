@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Synthetic terrain (sum of Gaussian hills) for tests and demos. No real site is modelled anywhere."""
 
 from __future__ import annotations

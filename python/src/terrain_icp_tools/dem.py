@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """DEM GeoTIFF -> PLY point cloud in local metres around a chosen origin."""
 
 from __future__ import annotations

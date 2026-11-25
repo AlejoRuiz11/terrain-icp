@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 cmake_minimum_required(VERSION 3.25)
 
 project(terrain_icp LANGUAGES CXX)

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Fabian Alejandro Ruiz Osorio (AlejoRuiz11)
 """Local Streamlit app (optional `ui` extra): a thin layer over `terrain-icp-tools run`.
 
 All the work is in ui_logic.py, which never touches `st` and is tested without a browser; this file only draws
@@ -10,6 +12,7 @@ from pathlib import Path
 
 import streamlit as st
 
+import terrain_icp_tools
 from terrain_icp_tools import ui_logic
 from terrain_icp_tools.ui_logic import Options, Outcome
 
@@ -33,6 +36,7 @@ def _app() -> None:
     st.set_page_config(page_title="terrain-icp", layout="wide")
     st.title("Terrain comparison (ICP)")
     st.caption("Aligns a terrain mesh to a georeferenced DEM. Runs locally: nothing is uploaded anywhere.")
+    st.caption(f"terrain-icp {terrain_icp_tools.__version__} · {terrain_icp_tools.__copyright__} · MIT License")
 
     col_a, col_b = st.columns(2)
     dem_up = col_a.file_uploader("Reference DEM (GeoTIFF)", type=["tif", "tiff"], key="dem")
