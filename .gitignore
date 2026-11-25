@@ -6,6 +6,7 @@ CMakeUserPresets.json
 
 # Data never lives in this repository: inputs are passed by path
 data/
+demo/
 *.tif
 *.tiff
 *.ply

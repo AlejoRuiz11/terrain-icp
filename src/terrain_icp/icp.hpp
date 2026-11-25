@@ -52,6 +52,7 @@ struct IcpResult {
   // reference point's tangent plane [m], positive when the moving point is above the reference; and whether that
   // pair passed the distance and trimming filters.
   std::vector<double> signed_distances;
+  std::vector<double> normal_z;  // z component of the paired reference normal: a height error dz shows as n_z * dz
   std::vector<bool> inliers;
   std::size_t inlier_count = 0;
   double rms = 0.0;  // RMS of the inlier signed distances [m]

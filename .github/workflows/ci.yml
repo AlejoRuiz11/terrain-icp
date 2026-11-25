@@ -42,3 +42,9 @@ jobs:
 
       - name: Test (GoogleTest)
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+      # The end-to-end tests find build/<preset>/terrain-icp on their own.
+      - name: Test (pytest)
+        run: |
+          uv sync --project python --locked
+          uv run --project python pytest python/tests

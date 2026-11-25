@@ -15,7 +15,7 @@ The core is a small C++20 point-to-plane ICP:
 Everything in this repository (tests, examples, figures) uses synthetic terrain. Real data stays outside the
 repository and is passed by path.
 
-> Status: MVP 1 (C++ core and CLI) done. See [Roadmap](#roadmap).
+> Status: MVP 1 (C++ core and CLI) and MVP 2 (Python tools) done. See [Roadmap](#roadmap).
 
 ## Usage
 
@@ -41,6 +41,45 @@ Outputs in `<dir>`:
 The transform maps the moving cloud onto the reference: `x_ref = scale * R * x_moving + t`, with
 `R = Rz(yaw) * Ry(pitch) * Rx(roll)` and yaw counter-clockwise seen from above. `--init` takes the same
 `transform` object (any key may be omitted), so a previous `results.json` can be reused as the starting point.
+
+## Python tools (DEM conversion, report, whole chain)
+
+`python/` is a [uv](https://docs.astral.sh/uv/) project (rasterio, numpy, matplotlib, plyfile). From the repository
+root:
+
+```bash
+uv run --project python terrain-icp-tools dem-to-ply dem.tif reference.ply --origin E N H [--step 2]
+uv run --project python terrain-icp-tools report out/ [--vertical-scale]
+uv run --project python terrain-icp-tools run dem.tif mesh.ply --origin E N H --out out/ \
+    [--shift-moving] [--scale] [--max-dist m] [--vertical-scale] [--exe path/to/terrain-icp]
+```
+
+- `dem-to-ply` turns band 1 of a GeoTIFF into pixel-centre points `(E − E0, N − N0, h − H0)`: a local metric frame
+  around a chosen origin (for example the landing zone), so the PLY keeps full precision. The DEM must be in a
+  projected CRS in metres; nodata is dropped; `--step n` keeps every n-th row and column.
+- `report` reads `results.json` and `residuals.ply` and writes `residual_map.png` (median residual per hexagonal
+  cell, diverging colour scale), `residual_histogram.png` and `summary.md` (scale, heading change, pitch/roll,
+  translation, RMS and percentiles, inliers, conditioning, warnings).
+- `run` chains `dem-to-ply`, `terrain-icp align` and `report`. With `--shift-moving` the mesh is taken to be in the
+  DEM's CRS and is shifted by the same origin.
+
+**Vertical scale** (`--vertical-scale`): a mesh can be stretched in height only (for example a camera calibration
+error), which a uniform scale cannot represent. After the alignment, a moving point whose heights are stretched by
+`k` about a level `z0` sits `dz = (z − z0)(1 − 1/k)` above the reference, seen by the point-to-plane residual as
+`n_z · dz`; a least-squares fit of `distance = n_z (a + b (z − z̄))` gives `k = 1 / (1 − b)`. Because the uniform
+ICP absorbs part of such a stretch (in its scale and tilt), `run` alternates: it divides the stretch found so far
+out of the moving heights and re-aligns from the previous result, until `|k − 1| < 1e-4` (at most 10 rounds). The
+report gives the vertical scale moving → reference as `scale / k`. On the synthetic test (heights exaggerated
+3 %) one fit alone is off by 0.6 %; the alternation recovers it to 0.05 %.
+
+`terrain-icp-tools synth --out demo/` writes a synthetic scene (`dem.tif` on a generic transverse Mercator,
+`mesh.ply` in the same CRS and `truth.json`), so the whole chain can be tried without real data:
+
+```bash
+uv run --project python terrain-icp-tools synth --out demo
+uv run --project python terrain-icp-tools run demo/dem.tif demo/mesh.ply --origin 1000 2000 100 --out demo/out \
+    --shift-moving --scale --vertical-scale --exe build/msvc-release/terrain-icp.exe
+```
 
 ## Method
 
@@ -95,11 +134,16 @@ vertices over the central 140 m × 140 m with 2 cm of noise) and check that:
   still reaches the noise level;
 - the PLY reader and writer round-trip ASCII and binary files, and skip faces and extra properties.
 
+The Python tests (`uv run --project python pytest python/tests`) check the DEM conversion against the analytic
+terrain, the report, and the whole `run` chain on a synthetic GeoTIFF and a georeferenced mesh, including a 3 %
+height exaggeration recovered by the vertical-scale step. The end-to-end tests use `build/<preset>/terrain-icp` or
+`$TERRAIN_ICP_EXE`, and are skipped when neither exists.
+
 ## Roadmap
 
 1. **C++ core** — ICP, conditioning, CLI, results.json and residuals.ply. *Done.*
-2. **Python tools** — DEM GeoTIFF to PLY around a chosen origin, residual heat map and summary report, one `run`
-   command for the whole chain.
+2. **Python tools** — DEM GeoTIFF to PLY around a chosen origin, residual heat map and summary report, vertical
+   scale, one `run` command for the whole chain. *Done.*
 3. **Cross-check with CloudCompare** — same synthetic inputs through its fine registration with scale; table of
    differences.
 

@@ -176,7 +176,8 @@ IcpResult align_files(const AlignRequest& request, std::ostream& log) {
   aligned.points.reserve(moving.points.size());
   for (const auto& p : moving.points) aligned.points.push_back(result.transform.apply(p));
   std::vector<double> inlier(result.inliers.begin(), result.inliers.end());
-  const ScalarField fields[] = {{"distance", result.signed_distances}, {"inlier", inlier}};
+  const ScalarField fields[] = {
+      {"distance", result.signed_distances}, {"inlier", inlier}, {"normal_z", result.normal_z}};
   write_ply(request.out_dir / "residuals.ply", aligned, PlyFormat::BinaryLittleEndian, fields);
 
   const Eigen::Vector3d ypr = ypr_from_rotation(result.transform.rotation) * kDeg;

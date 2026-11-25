@@ -1,0 +1,28 @@
+# Python side of terrain-icp: DEM GeoTIFF -> PLY, report (heat map, histogram, summary.md), and `run`, which chains
+# them around the C++ `terrain-icp align` executable. Run from the repository root with
+#   uv run --project python terrain-icp-tools <command> ...
+[project]
+name = "terrain-icp-tools"
+version = "0.1.0"
+description = "DEM conversion, reporting and pipeline for terrain-icp"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.1",
+    "rasterio>=1.4",
+    "plyfile>=1.1",
+    "matplotlib>=3.9",
+]
+
+[project.scripts]
+terrain-icp-tools = "terrain_icp_tools.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"

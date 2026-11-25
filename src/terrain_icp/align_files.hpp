@@ -27,7 +27,8 @@ Similarity read_initial_guess(const std::filesystem::path& path);
 std::vector<std::string> make_warnings(const IcpResult& result, const IcpOptions& options);
 
 // Reads both clouds (reference normals from the file when present, PCA otherwise), runs the ICP, writes
-// <out_dir>/results.json and <out_dir>/residuals.ply, and prints a short summary to `log`.
+// <out_dir>/results.json and <out_dir>/residuals.ply (aligned moving points with the fields distance, inlier and
+// normal_z), and prints a short summary to `log`.
 IcpResult align_files(const AlignRequest& request, std::ostream& log);
 
 }  // namespace terrain_icp

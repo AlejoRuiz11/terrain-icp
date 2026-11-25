@@ -282,6 +282,8 @@ IcpResult align(const std::vector<Vec3>& reference, const std::vector<Vec3>& ref
   }
   result.rms = std::sqrt(sum_sq / static_cast<double>(pairs.inlier_count));
   result.inlier_count = pairs.inlier_count;
+  result.normal_z.reserve(moving.size());
+  for (const std::uint32_t j : pairs.nearest) result.normal_z.push_back(reference_normals[j].z());
   result.signed_distances = std::move(pairs.signed_distances);
   result.inliers = std::move(pairs.inliers);
   result.eigenvalues = std::move(sol.eigenvalues);
